@@ -1,0 +1,137 @@
+"""
+Automação de Cadastro de Alunos - Integração Excel > Sistema Legado (Desktop)
+Autor: Caio Marcelo
+Tecnologias: Python, Pandas, PyAutoGUI, OpenPyXL
+
+Descrição:
+Este script automatiza o processo de Data Entry (entrada de dados), lendo uma planilha Excel
+tratada e inserindo os registros individualmente em um sistema desktop proprietário (ERP)
+que não possui API de integração.
+
+Funcionalidades:
+- Leitura e limpeza de dados (Pandas)
+- Controle de mouse/teclado (PyAutoGUI)
+- Tratamento de caracteres especiais em telefones
+- Pausas estratégicas para respeitar o tempo de resposta do sistema (Latency handling)
+"""
+
+import pandas as pd
+import pyautogui
+import time
+import os
+
+# --- CONFIGURAÇÕES DO PROCESSO (CONSTANTES) ---
+TEMPO_ENTRE_ACOES = 5       # Latência média entre cliques
+TEMPO_SALVAMENTO = 30       # Tempo de processamento do banco de dados
+TEMPO_RESET_LOOP = 30       # Tempo para limpar a tela para o próximo registro
+ARQUIVO_DADOS = "dados_alunos.xlsx"
+
+# Configurações de segurança do PyAutoGUI
+pyautogui.PAUSE = 1.0 
+pyautogui.FAILSAFE = True  # Permite abortar o script movendo o mouse para o canto superior esquerdo
+
+def limpar_telefone(telefone):
+    """
+    Remove caracteres não numéricos (parênteses, traços, espaços) 
+    para padronizar a entrada no sistema.
+    """
+    telefone = str(telefone) 
+    chars_to_remove = "()-. "
+    for char in chars_to_remove:
+        telefone = telefone.replace(char, "")
+    return telefone
+
+def carregar_dados():
+    """Carrega a planilha e seleciona apenas as colunas necessárias."""
+    print(f"Carregando dados de {ARQUIVO_DADOS}...")
+    try:
+        # Lê apenas colunas essenciais para otimizar memória
+        df = pd.read_excel(ARQUIVO_DADOS, usecols="A,D,J")
+        df.columns = ["Nome", "Email", "Celular"]
+        return df
+    except FileNotFoundError:
+        print(f"ERRO: O arquivo '{ARQUIVO_DADOS}' não foi encontrado.")
+        exit()
+    except Exception as e:
+        print(f"Erro inesperado ao abrir planilha: {e}")
+        exit()
+
+def executar_cadastro():
+    df_alunos = carregar_dados()
+    total_alunos = len(df_alunos)
+    
+    print(f"Iniciando automação para {total_alunos} registros.")
+    print(">>> ATENÇÃO: Mantenha a janela do sistema aberta e maximizada. Início em 5s. <<<")
+    time.sleep(5)
+
+    for index, linha in df_alunos.iterrows():
+        # Tratamento e Extração de Dados
+        nome = str(linha["Nome"])
+        email = str(linha["Email"])
+        celular = limpar_telefone(linha["Celular"])
+        
+        # Validação simples
+        if nome == "nan" or not nome.strip():
+            continue
+
+        print(f"[{index+1}/{total_alunos}] Processando: {nome}")
+
+        try:
+            # --- INÍCIO DO FLUXO DE NAVEGAÇÃO (Mapeamento de Tela) ---
+            # Obs: As coordenadas (x, y) são específicas para a resolução 1920x1080 
+            # e layout atual do sistema alvo.
+            
+            # 1. Iniciar Novo Cadastro
+            pyautogui.click(x=659, y=803)
+            time.sleep(TEMPO_ENTRE_ACOES) 
+            
+            # 2. Selecionar Motivo/Origem
+            pyautogui.click(x=274, y=353)
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            # 3. Selecionar Status
+            pyautogui.click(x=275, y=373)
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            # 4. Preencher Origem (Hardcode 'Feira')
+            pyautogui.click(x=190, y=398)
+            pyautogui.write("feira")
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            # 5. Preencher Dados Pessoais
+            pyautogui.click(x=182, y=421); pyautogui.write(nome)
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            pyautogui.click(x=188, y=468); pyautogui.write(email)
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            pyautogui.click(x=398, y=512); pyautogui.write(celular)
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            # 6. Navegação e Confirmação
+            pyautogui.click(x=289, y=534) # Seleção auxiliar
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            pyautogui.click(x=192, y=601) # Seleção auxiliar 2
+            time.sleep(TEMPO_ENTRE_ACOES)
+            
+            # 7. Salvar Registro
+            pyautogui.click(x=714, y=671)
+            
+            # Espera assíncrona simulada (tempo de loading do sistema)
+            print("Aguardando persistência no banco de dados...")
+            time.sleep(TEMPO_SALVAMENTO)
+            
+            # 8. Finalizar e Resetar Tela
+            pyautogui.click(x=400, y=477)
+            print(f"Registro '{nome}' concluído. Reiniciando ciclo...")
+            time.sleep(TEMPO_RESET_LOOP)
+
+        except pyautogui.FailSafeException:
+            print("Automação interrompida manualmente pelo usuário.")
+            break
+            
+    print("Processo de automação finalizado.")
+
+if __name__ == "__main__":
+    executar_cadastro()
