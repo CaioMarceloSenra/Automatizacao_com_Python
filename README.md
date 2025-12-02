@@ -37,5 +37,5 @@ Este repositório contém apenas o código-fonte da automação. Dados sensívei
 
 ---
 **Autor:** Caio Marcelo Nepomuceno Senra
-(linkedin.com/in/caio-marcelo-57aba4381)
+([linkedin.com/in/caio-marcelo-57aba4381](https://www.linkedin.com/public-profile/settings?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_self_edit_contact-info%3BxBPw%2FM8VRXOWwb%2F0sccmow%3D%3D))
 
